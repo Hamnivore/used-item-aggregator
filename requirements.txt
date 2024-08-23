@@ -1,0 +1,4 @@
+pyzmq==22.3.0
+beautifulsoup4==4.10.0
+curl-cffi==0.5.5
+redis==4.1.4
