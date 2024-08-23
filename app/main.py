@@ -17,7 +17,7 @@ class UsedItemsFinder:
         await self.zmq_socket.send_json(update)
 
     async def search(self, query):
-        tasks = [scraper.search(query) for scraper in self.scrapers]
+        tasks = [scraper.safe_search(query) for scraper in self.scrapers]
         results = await asyncio.gather(*tasks)
         for scraper, result in zip(self.scrapers, results):
             if result:
@@ -27,19 +27,33 @@ class UsedItemsFinder:
                         "source": scraper.__class__.__name__,
                         "data": item
                     })
+            else:
+                await self.send_update({
+                    "type": "error",
+                    "source": scraper.__class__.__name__,
+                    "message": f"Scraper failed to return results"
+                })
         await self.send_update({"type": "search_complete"})
 
     async def run(self):
         print("UsedItemsFinder is running and waiting for commands...")
         try:
             while True:
-                message = await self.zmq_socket.recv_json()
-                if message['type'] == 'search':
-                    print(f"Received search request for: {message['query']}")
-                    await self.search(message['query'])
-                elif message['type'] == 'exit':
-                    print("Received exit command. Shutting down...")
-                    break
+                try:
+                    message = await self.zmq_socket.recv_json()
+                    if message['type'] == 'search':
+                        print(f"Received search request for: {message['query']}")
+                        await self.search(message['query'])
+                    elif message['type'] == 'exit':
+                        print("Received exit command. Shutting down...")
+                        break
+                except Exception as e:
+                    print(f"Error processing message: {str(e)}")
+                    await self.send_update({
+                        "type": "error",
+                        "source": "UsedItemsFinder",
+                        "message": f"Error processing message: {str(e)}"
+                    })
         finally:
             for scraper in self.scrapers:
                 await scraper.close()

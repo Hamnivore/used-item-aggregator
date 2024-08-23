@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Used Items Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        #search-form {
+            margin-bottom: 20px;
+        }
+        #results {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .result-item {
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 15px;
+            width: calc(33.333% - 20px);
+        }
+        .result-item h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .result-item p {
+            margin: 5px 0;
+        }
+        .result-item a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .result-item a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Used Items Finder</h1>
+    <div id="search-form">
+        <input type="text" id="search-input" placeholder="Enter search query">
+        <button onclick="search()">Search</button>
+    </div>
+    <div id="results"></div>
+
+    <script>
+        function search() {
+            const query = document.getElementById('search-input').value;
+            fetch(`/search/${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = '';
+                    data.forEach(item => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'result-item';
+                        itemDiv.innerHTML = `
+                            <h3>${item.data.name}</h3>
+                            <p>Price: $${item.data.price || 'N/A'}</p>
+                            <p>Source: ${item.source}</p>
+                            <p><a href="${item.data.url}" target="_blank">View Item</a></p>
+                        `;
+                        resultsDiv.appendChild(itemDiv);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

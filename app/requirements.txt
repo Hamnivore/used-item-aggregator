@@ -1,3 +1,4 @@
 curl-cffi==0.5.5
 beautifulsoup4==4.10.0
 pyzmq==22.3.0
+flask

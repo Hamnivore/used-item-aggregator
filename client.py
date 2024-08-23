@@ -1,7 +1,10 @@
 import asyncio
 import zmq
 import zmq.asyncio
-import json
+import sys
+
+if sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 class UsedItemsFinderClient:
     def __init__(self):
@@ -21,6 +24,8 @@ class UsedItemsFinderClient:
                 print(f"Price: ${message['data']['price']}" if message['data']['price'] else "Price: N/A")
                 print(f"URL: {message['data']['url']}")
                 print("-" * 50)
+            elif message['type'] == 'error':
+                print(f"Error from {message['source']}: {message['message']}")
             elif message['type'] == 'search_complete':
                 print("Search completed.")
                 break

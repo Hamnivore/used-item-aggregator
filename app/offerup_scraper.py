@@ -14,7 +14,7 @@ class OfferUpScraper(ScraperBase):
             return self._extract_listings(response.text)
         else:
             print(f"Error: Status code {response.status_code}")
-            return None
+            return []
     
     def _extract_listings(self, html):
         soup = bs(html, 'html.parser')

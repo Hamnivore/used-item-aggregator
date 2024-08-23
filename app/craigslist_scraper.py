@@ -10,8 +10,9 @@ class CraigslistScraper(ScraperBase):
     async def search(self, query):
         await self._init_session()
         search_path = await self._perform_search(query)
+        # testing error handling
         data = await self._api_request(query, search_path)
-        return self._extract_listings(data) if data else None
+        return self._extract_listings(data) if data else []
 
     async def _init_session(self):
         response = await self.get(self.base_url, impersonate="chrome110")
