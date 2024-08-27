@@ -7,42 +7,97 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: #f0f0f0;
         }
         h1 {
             color: #333;
+            text-align: center;
         }
         #search-form {
+            display: flex;
+            justify-content: center;
             margin-bottom: 20px;
+        }
+        #search-input {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            width: 300px;
+        }
+        #search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        #search-button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+        #status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
         }
         #results {
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
+            flex-direction: column;
+            gap: 15px;
         }
-        .result-item {
-            background-color: #fff;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            padding: 15px;
-            width: calc(33.333% - 20px);
-        }
-        .result-item h3 {
-            margin-top: 0;
-            color: #2c3e50;
-        }
-        .result-item p {
-            margin: 5px 0;
-        }
-        .result-item a {
-            color: #3498db;
+        .card {
+            display: flex;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
             text-decoration: none;
+            color: inherit;
+            transition: box-shadow 0.3s ease;
         }
-        .result-item a:hover {
-            text-decoration: underline;
+        .card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .card-image {
+            width: 150px;
+            height: 150px;
+            flex-shrink: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+        .no-image {
+            color: #999;
+            font-size: 14px;
+        }
+        .card-content {
+            padding: 15px;
+            flex-grow: 1;
+        }
+        .card h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .card p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .card.error {
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
         }
     </style>
 </head>
@@ -50,31 +105,93 @@
     <h1>Used Items Finder</h1>
     <div id="search-form">
         <input type="text" id="search-input" placeholder="Enter search query">
-        <button onclick="search()">Search</button>
+        <button id="search-button" onclick="search()">Search</button>
     </div>
+    <div id="status"></div>
     <div id="results"></div>
-
     <script>
+        let isSearching = false;
+        
         function search() {
+            if (isSearching) return;
+            isSearching = true;
+
             const query = document.getElementById('search-input').value;
+            const button = document.getElementById('search-button');
+            button.disabled = true;
+            document.getElementById('status').textContent = "Starting search...";
+            document.getElementById('results').innerHTML = '';
+
             fetch(`/search/${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => {
-                    const resultsDiv = document.getElementById('results');
-                    resultsDiv.innerHTML = '';
-                    data.forEach(item => {
-                        const itemDiv = document.createElement('div');
-                        itemDiv.className = 'result-item';
-                        itemDiv.innerHTML = `
-                            <h3>${item.data.name}</h3>
-                            <p>Price: $${item.data.price || 'N/A'}</p>
-                            <p>Source: ${item.source}</p>
-                            <p><a href="${item.data.url}" target="_blank">View Item</a></p>
-                        `;
-                        resultsDiv.appendChild(itemDiv);
-                    });
+                    console.log(data.message);
+                    getResults(data.search_id);
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    isSearching = false;
+                    button.disabled = false;
+                });
+        }
+
+        function getResults(searchId) {
+            fetch(`/results/${searchId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById('results');
+                    const statusDiv = document.getElementById('status');
+                    const button = document.getElementById('search-button');
+                    
+                    if (data.is_searching) {
+                        statusDiv.textContent = "Searching...";
+                        setTimeout(() => getResults(searchId), 1000);
+                    } else {
+                        statusDiv.textContent = "Search completed.";
+                        displayResults(data.results);
+                        isSearching = false;
+                        button.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    isSearching = false;
+                    document.getElementById('search-button').disabled = false;
+                });
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            results.forEach(item => {
+                if (item.type === "result") {
+                    const card = document.createElement('a');
+                    card.className = 'card';
+                    card.href = item.data.url || '#';
+                    card.target = '_blank';
+                    card.innerHTML = `
+                        <div class="card-image">
+                            ${item.data.image_urls && item.data.image_urls.length > 0 
+                                ? `<img src="${item.data.image_urls[0]}" alt="Item image">` 
+                                : '<div class="no-image">No Image</div>'}
+                        </div>
+                        <div class="card-content">
+                            <h3>${item.data.name || 'No Title'}</h3>
+                            <p>Price: ${item.data.price || 'N/A'}</p>
+                            <p>Source: ${item.source}</p>
+                        </div>
+                    `;
+                    resultsDiv.appendChild(card);
+                } else if (item.type === "error") {
+                    const errorCard = document.createElement('div');
+                    errorCard.className = 'card error';
+                    errorCard.innerHTML = `
+                        <h3>Error: ${item.source}</h3>
+                        <p>${item.message}</p>
+                    `;
+                    resultsDiv.appendChild(errorCard);
+                }
+            });
         }
     </script>
 </body>
